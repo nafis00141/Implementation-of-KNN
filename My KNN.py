@@ -4,92 +4,97 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 import numpy as np
 
-
 def dist(x,y):   
     return np.sqrt(np.sum((x-y)**2))
 
-def KNearestNeighbors(x_train,x_test,y_train,k):
-    
-    test_size = x_test.shape[0] #number of testing data 
-    train_size = x_train.shape[0] #number of training data
-    
-    #print("test size "+ repr( test_size) +" train_size "+ repr(train_size))
-    
-    d = np.zeros((test_size,train_size)) #test_size = row,train_size = col
-    
-    for i in range(test_size):
-        for j in range(train_size):
-            d[i,j] = dist(x_train[j],x_test[i]) #d[i] array holds the destince of i'th test image and all the train image
-            
-    #print(d)
-    
-    ind = np.zeros((test_size,k))
-    
-    for i in range(test_size):
-        ind[i] = np.argpartition(d[i], k)[:k] # quickly find the k smallest elements index.not necesseryly sorted 
-    
-    y = np.zeros((test_size,k))
-    
-    ind = ind.astype(int)
-    
-    #print(ind)
-    
-    #print(y_train)
-    
-    for i in range(test_size):
-        y[i] = y_train[ind[i]] #finds the lables of the corrosponding indexes
+class MyKNearestNeighbor:
+
+    def __init__(self, n_neighbors = 3):
+        self.n_neighbors = n_neighbors
         
-    #print(y)
-    
-    y_pre = np.zeros(test_size)
-    
-    for i in range(test_size):
-       y_pre[i] = np.argmax(np.bincount(y[i].astype(np.int32))) #find the most frequent lable in this list
-       
-    y_pre = y_pre.astype(int)# froat to int
+    def fit(self, x_train, y_train):
+        self.x_train = x_train
+        self.y_train = y_train 
+        
+    def predict(self, x_test):
+        return self.__kNearestNeighbors(self.x_train, x_test, self.y_train, self.n_neighbors)
 
-    #print(y_pre)
-    
-    return y_pre
+    def __kNearestNeighbors(self, x_train, x_test, y_train, k):
+        test_size = x_test.shape[0] #number of testing data 
+        train_size = x_train.shape[0] #number of training data
+
+        d = np.zeros((test_size,train_size)) #test_size = row,train_size = col
+
+        for i in range(test_size):
+            for j in range(train_size):
+                d[i,j] = dist(x_train[j],x_test[i]) #d[i] array holds the destince of i'th test image and all the train image
+
+        ind = np.zeros((test_size,k))
+
+        for i in range(test_size):
+            ind[i] = np.argpartition(d[i], k)[:k] #quickly find the k smallest elements index.not necesseryly sorted 
+
+        y = np.zeros((test_size,k))
+
+        ind = ind.astype(int)
+
+        for i in range(test_size):
+            y[i] = y_train[ind[i]] #finds the lables of the corrosponding indexes
+
+        y_pred = np.zeros(test_size)
+
+        for i in range(test_size):
+           y_pred[i] = np.argmax(np.bincount(y[i].astype(np.int32))) #find the most frequent lable in this list
+
+        y_pred = y_pred.astype(int)# froat to int
+
+        return y_pred
     
 
-digits = datasets.load_digits()
+class Main:
+    
+    def __init__(self, n_neighbors = 3):
+        self.n_neighbors = n_neighbors
+    
+    def __LoadDataSet(self):
+        self.digits = datasets.load_digits()
+        
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(self.digits.data, self.digits.target, test_size = 0.25, random_state = 0)
+        
+    def __Plot(self):
+        plt.matshow(self.digits.images[5])
+        
+        plt.matshow(self.digits.images[6]) 
+        
+        plt.show()
+        
+    def __BuildInClassifier(self):
+        clf = KNeighborsClassifier(n_neighbors = self.n_neighbors)
 
-'''
-plt.matshow(digits.images[5]) 
-plt.show() 
-print(digits.target[5])
-print(digits.data[5])
-'''
+        clf.fit(self.x_train, self.y_train)
 
-X = digits.data
-y = digits.target
+        y_pred = clf.predict(self.x_test)
 
-'''
-plt.matshow(digits.images[5]) 
-print(digits.target[5])
-plt.matshow(digits.images[6]) 
-print(digits.target[6])
-print(dist(X[5],X[6]))
-'''
+        print('sklearn built in KNN classification report:')
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 0)
+        print(metrics.classification_report(self.y_test, y_pred))
+        
+    def __MyClassifier(self):
+        myClf = MyKNearestNeighbor(n_neighbors = self.n_neighbors)
 
+        myClf.fit(self.x_train, self.y_train)
 
-clf = KNeighborsClassifier(n_neighbors=3)
-    
-clf.fit(X_train,y_train)
-    
-y_pred = clf.predict(X_test)
-    
-print('sklearn built in KNN classification report:')
-    
-print(metrics.classification_report(y_test, y_pred))
-    
-    
-my_y_pred = KNearestNeighbors(X_train,X_test,y_train,3)
-    
-print('My KNN classification report:')
-    
-print(metrics.classification_report(y_test, my_y_pred))
+        my_y_pred = myClf.predict(self.x_test)
 
+        print('My KNN classification report:')
+
+        print(metrics.classification_report(self.y_test, my_y_pred))
+    
+    def run(self):
+        self.__LoadDataSet()
+        self.__Plot()
+        self.__BuildInClassifier()
+        self.__MyClassifier()
+        
+x = Main()
+x.run()
